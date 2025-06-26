@@ -15,3 +15,4 @@ Luego, instala las dependencias necesarias con los siguientes comandos:
 ```bash
 pip install pandas numpy matplotlib seaborn scikit-learn mlxtend packaging
 pip install pyinstaller
+pip install customtkinter
