@@ -1,4 +1,4 @@
-# MachineLearning_Minimarket-OK
+# Project_Minimarket-OK
 Predicción Inteligente de la Demanda y Rentabilidad de Productos Minoristas para el minimarket OK
 # 📊 Sistema de Predicción para Minimarket
 
@@ -6,17 +6,15 @@ Este proyecto contiene un sistema de análisis y predicción para ventas en un m
 
 ---
 
-## ✅ Requisitos de instalación
+## ✅ Requisitos de instalación e instrucciones
 
 Antes de ejecutar el proyecto, asegúrate de tener Python instalado.
 
-Luego, instala las dependencias necesarias con los siguientes comandos:
+Primero muevete a la carpeta Try_customtkinter usando: 
+`cd .\Try_customtkinter\`
 
-```bash
-pip install pandas numpy matplotlib seaborn scikit-learn mlxtend packaging
-pip install pyinstaller
-pip install streamlit
-pip install plotly
+Ddespués instala las dependencias necesarias con el siguiente comando:
+`pip install -r requirements.txt`
 
-Para instalar los requerimientos
-pip install -r requirements.txt
+Luego jecuta el siguiente comando:
+`streamlit run main.py`
