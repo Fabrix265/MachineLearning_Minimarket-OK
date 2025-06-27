@@ -1,3 +1,5 @@
+# Este es el codigo modular, para el desplegado esta en la carpeta Try_customtkinter
+
 # MachineLearning_Minimarket-OK
 Predicción Inteligente de la Demanda y Rentabilidad de Productos Minoristas para el minimarket OK
 # 📊 Sistema de Predicción para Minimarket
