@@ -37,28 +37,40 @@ class ProductReportStreamlit:
         return df_producto
     
     def generate_sales_summary(self, df_producto):
-        """Genera resumen de ventas por año y mes"""
+        """
+        Genera resumen de ventas por año y mes, incluyendo una columna de fecha completa para ordenar.
+        Esta columna es crucial para el orden cronológico correcto en los gráficos de línea.
+        """
         resumen = df_producto.groupby(['Año', 'Mes']).agg({
             'PrecioTotal': 'sum',
             'Cantidad': 'sum'
         }).reset_index()
         
         resumen['MesNombre'] = resumen['Mes'].map(self.meses_abrev)
-        resumen = resumen.sort_values(['Año', 'Mes'])
+        
+        # Crear una columna de fecha completa para asegurar el orden cronológico en los gráficos de línea
+        # Se usa el primer día del mes para representar cada punto temporal
+        resumen['FechaCompleta'] = pd.to_datetime(resumen['Año'].astype(str) + '-' + resumen['Mes'].astype(str) + '-01')
+        
+        # Ordenar el DataFrame por la nueva columna de fecha completa
+        resumen = resumen.sort_values('FechaCompleta')
         
         return resumen
     
     def create_sales_line_chart(self, resumen, nombre_producto):
-        """Crea gráfico de líneas de ventas por año"""
+        """
+        Crea gráfico de líneas de ventas por año, utilizando la columna 'FechaCompleta'
+        para asegurar un orden cronológico correcto en el eje X.
+        """
         fig = px.line(
             resumen, 
-            x='MesNombre', 
+            x='FechaCompleta', # Usar la fecha completa para el orden cronológico
             y='PrecioTotal',
             color='Año',
             title=f'Evolución de Ventas - {nombre_producto}',
             labels={
                 'PrecioTotal': 'Ventas (S/.)',
-                'MesNombre': 'Mes',
+                'FechaCompleta': 'Fecha', # Etiqueta del eje X como 'Fecha'
                 'Año': 'Año'
             },
             markers=True,
@@ -77,6 +89,9 @@ class ProductReportStreamlit:
             hovermode='x unified'
         )
         
+        # Formatear las etiquetas del eje X para mostrar el mes abreviado y el año (ej. "May 2022")
+        fig.update_xaxes(tickformat="%b %Y")
+        
         # Agregar valores en los puntos
         for trace in fig.data:
             trace.textposition = "top center"
@@ -86,9 +101,15 @@ class ProductReportStreamlit:
         return fig
     
     def create_comparative_bar_chart(self, resumen, nombre_producto):
-        """Crea gráfico de barras comparativo por años"""
+        """
+        Crea gráfico de barras comparativo por años, asegurando el orden correcto de los meses
+        en el eje X.
+        """
+        # Ordenar los datos por mes numérico y luego por año para una agrupación consistente
+        resumen_sorted_for_bar = resumen.sort_values(['Mes', 'Año'])
+        
         fig = px.bar(
-            resumen,
+            resumen_sorted_for_bar,
             x='MesNombre',
             y='PrecioTotal',
             color='Año',
@@ -99,6 +120,7 @@ class ProductReportStreamlit:
                 'Año': 'Año'
             },
             height=500,
+            barmode='group', # Agrupar las barras de diferentes años por mes
             text='PrecioTotal'
         )
         
@@ -113,12 +135,22 @@ class ProductReportStreamlit:
             template='plotly_white'
         )
         
+        # Asegurar que el eje X (MesNombre) tenga un orden consistente (Ene, Feb, Mar, ...)
+        ordered_months = [self.meses_abrev[i] for i in range(1, 13)]
+        fig.update_xaxes(categoryorder='array', categoryarray=ordered_months)
+
         return fig
     
     def create_units_chart(self, resumen, nombre_producto):
-        """Crea gráfico de unidades vendidas"""
+        """
+        Crea gráfico de unidades vendidas, asegurando el orden correcto de los meses
+        en el eje X.
+        """
+        # Ordenar los datos por mes numérico y luego por año para una agrupación consistente
+        resumen_sorted_for_bar = resumen.sort_values(['Mes', 'Año'])
+
         fig = px.bar(
-            resumen,
+            resumen_sorted_for_bar,
             x='MesNombre',
             y='Cantidad',
             color='Año',
@@ -129,6 +161,7 @@ class ProductReportStreamlit:
                 'Año': 'Año'
             },
             height=450,
+            barmode='group', # Agrupar las barras de diferentes años por mes
             text='Cantidad'
         )
         
@@ -141,6 +174,10 @@ class ProductReportStreamlit:
             legend_title_font_size=14,
             template='plotly_white'
         )
+
+        # Asegurar que el eje X (MesNombre) tenga un orden consistente (Ene, Feb, Mar, ...)
+        ordered_months = [self.meses_abrev[i] for i in range(1, 13)]
+        fig.update_xaxes(categoryorder='array', categoryarray=ordered_months)
         
         return fig
     
@@ -173,9 +210,19 @@ class ProductReportStreamlit:
         """Crea mapa de calor de tendencias mensuales"""
         # Crear tabla pivote para el heatmap
         heatmap_data = df_producto.groupby(['Año', 'Mes'])['PrecioTotal'].sum().reset_index()
+        
+        # Asegurar que todos los meses (1-12) estén presentes para cada año, rellenando los faltantes con 0
+        all_years = heatmap_data['Año'].unique()
+        all_months_range = range(1, 13)
+        all_combinations = pd.MultiIndex.from_product([all_years, all_months_range], names=['Año', 'Mes'])
+        
+        heatmap_data = heatmap_data.set_index(['Año', 'Mes']).reindex(all_combinations, fill_value=0).reset_index()
+
         pivot_data = heatmap_data.pivot(index='Año', columns='Mes', values='PrecioTotal').fillna(0)
         
-        # Renombrar columnas con nombres de meses
+        # Renombrar columnas con nombres de meses abreviados en el orden correcto
+        # Asegurarse de que las columnas estén ordenadas numéricamente primero antes de mapear a nombres de meses
+        pivot_data = pivot_data.reindex(columns=sorted(pivot_data.columns))
         pivot_data.columns = [self.meses_abrev[mes] for mes in pivot_data.columns]
         
         fig = px.imshow(
@@ -183,7 +230,8 @@ class ProductReportStreamlit:
             labels=dict(x="Mes", y="Año", color="Ventas (S/.)"),
             title=f'Mapa de Calor de Ventas - {nombre_producto}',
             color_continuous_scale='Blues',
-            height=400
+            height=400,
+            text_auto=True # Mostrar valores en las celdas del heatmap
         )
         
         fig.update_layout(
@@ -335,6 +383,7 @@ class ProductReportStreamlit:
                     st.plotly_chart(fig_line, use_container_width=True)
                     
                     # Insights automáticos
+                    # Asegurarse de usar 'PrecioTotal' para encontrar el mejor/peor mes
                     mes_mejor = resumen.loc[resumen['PrecioTotal'].idxmax()]
                     mes_peor = resumen.loc[resumen['PrecioTotal'].idxmin()]
                     
