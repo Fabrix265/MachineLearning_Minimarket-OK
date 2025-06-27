@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from mlxtend.frequent_patterns import apriori, association_rules
 from mlxtend.preprocessing import TransactionEncoder
+import streamlit as st
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -98,190 +99,182 @@ class BasketAnalysisStreamlit:
         return self.perform_market_basket_analysis(transacciones_mes, mes_nombre)
         
     def perform_market_basket_analysis(self, transacciones, mes_nombre):
-        """Ejecuta el análisis de market basket"""
-        print(f"\n Ejecutando análisis de patrones de compra...")
-        
+        """Ejecuta el análisis de market basket usando Streamlit"""
+        st.subheader("🔍 Análisis de Patrones de Compra")
+
         try:
             # Codificar transacciones
             te = TransactionEncoder()
             te_ary = te.fit(transacciones).transform(transacciones)
             df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
-            
-            print(f"   • Productos codificados: {len(te.columns_)}")
-            
+
+            st.write(f"✅ Productos codificados: {len(te.columns_)}")
+
             # Calcular soporte mínimo dinámico
             min_support = max(0.15, 2 / len(transacciones))
-            print(f"   • Soporte mínimo: {min_support:.2%}")
-            
+            st.write(f"📊 Soporte mínimo: {min_support:.2%}")
+
             # Encontrar itemsets frecuentes
             self.frequent_itemsets = apriori(df_encoded, min_support=min_support, use_colnames=True)
-            
+
             if self.frequent_itemsets.empty:
-                print("\n No se encontraron patrones frecuentes de compra.")
-                print("   Intente con un mes que tenga más transacciones.")
+                st.warning("⚠️ No se encontraron patrones frecuentes de compra. Intente con un mes que tenga más transacciones.")
                 return False
-                
-            print(f"   • Patrones frecuentes encontrados: {len(self.frequent_itemsets)}")
-            
+
+            st.success(f"🔗 Patrones frecuentes encontrados: {len(self.frequent_itemsets)}")
+
             # Generar reglas de asociación
-            self.rules = association_rules(self.frequent_itemsets, 
-                                         metric="confidence", 
-                                         min_threshold=0.3)
-            
+            self.rules = association_rules(self.frequent_itemsets, metric="confidence", min_threshold=0.3)
+
             # Filtrar reglas triviales
             self.rules = self.rules[self.rules['confidence'] < 1.0]
-            
+
             if self.rules.empty:
-                print("\n No se generaron reglas de asociación significativas.")
+                st.warning("⚠️ No se generaron reglas de asociación significativas.")
                 self.show_frequent_products(df_encoded, mes_nombre)
                 return False
-                
-            print(f"   • Reglas de asociación generadas: {len(self.rules)}")
-            
+
+            st.success(f"📈 Reglas de asociación generadas: {len(self.rules)}")
+
             # Mostrar resultados
             self.show_analysis_results(mes_nombre)
             self.show_detailed_rules()
             self.show_frequent_products(df_encoded, mes_nombre)
-            
+
             return True
-            
+
         except Exception as e:
-            print(f" Error en el análisis: {e}")
+            st.error(f"❌ Error en el análisis: {e}")
             return False
-            
+
     def show_analysis_results(self, mes_nombre):
-        """Muestra los resultados principales del análisis"""
-        print(f"\n" + "="*60)
-        print(f"           PROMOCIONES RECOMENDADAS - {mes_nombre.upper()}")
-        print("="*60)
-        
-        # Ordenar reglas por confianza y tomar las mejores
-        top_rules = self.rules.sort_values(['confidence', 'lift'], ascending=False).head(5)
-        
-        if len(top_rules) == 0:
-            print("No se encontraron promociones recomendadas.")
+        """Muestra los resultados principales del análisis con Streamlit"""
+        st.subheader(f"🎯 Promociones Recomendadas - {mes_nombre.upper()}")
+
+        if self.rules is None or self.rules.empty:
+            st.warning("No se encontraron promociones recomendadas.")
             return
-            
+
+        # Ordenar reglas por confianza y lift
+        top_rules = self.rules.sort_values(['confidence', 'lift'], ascending=False).head(5)
+
         for i, (_, rule) in enumerate(top_rules.iterrows(), 1):
-            antecedent = ', '.join(list(rule['antecedents']))
-            consequent = ', '.join(list(rule['consequents']))
+            antecedent = ', '.join(rule['antecedents'])
+            consequent = ', '.join(rule['consequents'])
             confidence = rule['confidence'] * 100
             lift = rule['lift']
             support = rule['support'] * 100
-            
-            print(f"\n PROMOCIÓN {i}:")
-            print(f"   Si compra: {antecedent}")
-            print(f"   Sugerir:   {consequent}")
-            print(f"   Confianza: {confidence:.1f}% | Lift: {lift:.2f} | Soporte: {support:.1f}%")
-            
+
             # Interpretación del lift
             if lift > 1.5:
-                interpretacion = "Combinación muy fuerte"
+                interpretacion = "💪 Combinación muy fuerte"
             elif lift > 1.2:
-                interpretacion = "Combinación interesante"
+                interpretacion = "✅ Combinación interesante"
             else:
-                interpretacion = "Combinación moderada"
-            
-            print(f"   {interpretacion}")
+                interpretacion = "⚠️ Combinación moderada"
+
+            with st.expander(f"📌 Promoción {i}: {antecedent} → {consequent}"):
+                st.markdown(f"""
+                - **Si compra:** {antecedent}
+                - **Sugerir:** {consequent}
+                - **Confianza:** {confidence:.1f}%
+                - **Lift:** {lift:.2f}
+                - **Soporte:** {support:.1f}%
+                - **Interpretación:** {interpretacion}
+                """)
+
             
     def show_detailed_rules(self):
-        """Muestra análisis detallado de las reglas"""
-        print(f"\n" + "="*60)
-        print("              ANÁLISIS DETALLADO DE REGLAS")
-        print("="*60)
-        
-        print("\n MÉTRICAS DE LAS REGLAS:")
-        print("-" * 50)
-        
-        # Estadísticas generales
-        print(f"• Total de reglas generadas: {len(self.rules)}")
-        print(f"• Confianza promedio: {self.rules['confidence'].mean():.1%}")
-        print(f"• Lift promedio: {self.rules['lift'].mean():.2f}")
-        print(f"• Soporte promedio: {self.rules['support'].mean():.1%}")
-        
-        # Top reglas por diferentes métricas
-        print(f"\nTOP 3 POR CONFIANZA:")
+        """Muestra análisis detallado de las reglas en Streamlit"""
+        st.subheader("📐 Análisis Detallado de Reglas")
+
+        if self.rules is None or self.rules.empty:
+            st.warning("No hay reglas disponibles para análisis detallado.")
+            return
+
+        st.markdown("### 📊 Métricas Generales de Reglas")
+        st.write(f"• **Total de reglas generadas:** {len(self.rules)}")
+        st.write(f"• **Confianza promedio:** {self.rules['confidence'].mean():.1%}")
+        st.write(f"• **Lift promedio:** {self.rules['lift'].mean():.2f}")
+        st.write(f"• **Soporte promedio:** {self.rules['support'].mean():.1%}")
+
+        # Top 3 por confianza
+        st.markdown("### 🔝 Top 3 Reglas por Confianza")
         top_confidence = self.rules.nlargest(3, 'confidence')
-        
         for i, (_, rule) in enumerate(top_confidence.iterrows(), 1):
-            ant = ', '.join(list(rule['antecedents']))
-            con = ', '.join(list(rule['consequents']))
-            print(f"   {i}. {ant} → {con} ({rule['confidence']:.1%})")
-            
-        print(f"\nTOP 3 POR LIFT:")
+            antecedent = ', '.join(rule['antecedents'])
+            consequent = ', '.join(rule['consequents'])
+            st.write(f"{i}. **{antecedent} → {consequent}** ({rule['confidence']:.1%} confianza)")
+
+        # Top 3 por lift
+        st.markdown("### 🚀 Top 3 Reglas por Lift")
         top_lift = self.rules.nlargest(3, 'lift')
-        
         for i, (_, rule) in enumerate(top_lift.iterrows(), 1):
-            ant = ', '.join(list(rule['antecedents']))
-            con = ', '.join(list(rule['consequents']))
-            print(f"   {i}. {ant} → {con} (lift: {rule['lift']:.2f})")
-            
+            antecedent = ', '.join(rule['antecedents'])
+            consequent = ', '.join(rule['consequents'])
+            st.write(f"{i}. **{antecedent} → {consequent}** (lift: {rule['lift']:.2f})")
+
     def show_frequent_products(self, df_encoded, mes_nombre):
-        """Muestra productos más frecuentes del mes"""
-        print(f"\n" + "="*60)
-        print(f"         PRODUCTOS MÁS VENDIDOS - {mes_nombre.upper()}")
-        print("="*60)
-        
+        """Muestra productos más frecuentes del mes en Streamlit"""
+        st.subheader(f"📦 Productos Más Vendidos - {mes_nombre.upper()}")
+
         # Calcular frecuencia de cada producto
         product_freq = df_encoded.mean().sort_values(ascending=False)
-        
-        print("\nTOP 10 PRODUCTOS MÁS FRECUENTES:")
-        print("-" * 40)
-        
+
+        st.markdown("### 🔝 Top 10 Productos Más Frecuentes")
         for i, (producto, freq) in enumerate(product_freq.head(10).items(), 1):
-            print(f"{i:2d}. {producto:<25} {freq:.1%}")
-            
+            st.write(f"{i}. **{producto}** - {freq:.1%} de las transacciones")
+
         # Productos que aparecen en menos del 5% de transacciones
         rare_products = product_freq[product_freq < 0.05]
         if len(rare_products) > 0:
-            print(f"\nProductos de baja frecuencia ({len(rare_products)}):")
-            print("    (Aparecen en menos del 5% de las transacciones)")
+            st.markdown("### ⚠️ Productos de Baja Frecuencia")
+            st.info(f"Aparecen en menos del 5% de las transacciones ({len(rare_products)} productos)")
             for producto in rare_products.head(5).index:
-                print(f"    • {producto}")
+                st.write(f"• {producto}")
             if len(rare_products) > 5:
-                print(f"    ... y {len(rare_products) - 5} más")
-                
+                st.write(f"... y **{len(rare_products) - 5}** más")
+
     def generate_marketing_insights(self, mes_numero):
-        """Genera insights para marketing"""
+        """Genera insights para marketing usando Streamlit"""
         mes_nombre = self.meses_nombres[mes_numero]
-        
-        print(f"\n" + "="*60)
-        print(f"           INSIGHTS PARA MARKETING - {mes_nombre.upper()}")
-        print("="*60)
-        
+
+        st.subheader(f"📢 Insights para Marketing - {mes_nombre.upper()}")
+
         if self.rules is None or len(self.rules) == 0:
-            print("No hay suficientes datos para generar insights de marketing.")
+            st.warning("No hay suficientes datos para generar insights de marketing.")
             return
-            
+
         # Productos que más aparecen como antecedentes (productos ancla)
         all_antecedents = []
         for _, rule in self.rules.iterrows():
             all_antecedents.extend(list(rule['antecedents']))
-            
+
         antecedent_counts = pd.Series(all_antecedents).value_counts()
-        
-        print(f"\nPRODUCTOS ANCLA (generan más ventas cruzadas):")
+
+        st.markdown("### 🎯 Productos Ancla (generan más ventas cruzadas)")
         for i, (producto, count) in enumerate(antecedent_counts.head(5).items(), 1):
-            print(f"   {i}. {producto} (aparece en {count} reglas)")
-            
+            st.write(f"{i}. **{producto}** - aparece en {count} reglas")
+
         # Productos que más aparecen como consecuentes (productos sugeridos)
         all_consequents = []
         for _, rule in self.rules.iterrows():
             all_consequents.extend(list(rule['consequents']))
-            
+
         consequent_counts = pd.Series(all_consequents).value_counts()
-        
-        print(f"\nPRODUCTOS PARA PROMOCIONAR (más sugeridos):")
+
+        st.markdown("### 🛍️ Productos para Promocionar (más sugeridos)")
         for i, (producto, count) in enumerate(consequent_counts.head(5).items(), 1):
-            print(f"   {i}. {producto} (sugerido en {count} reglas)")
-            
+            st.write(f"{i}. **{producto}** - sugerido en {count} reglas")
+
         # Recomendaciones estratégicas
-        print(f"\nESTRATEGIAS RECOMENDADAS:")
-        print("   • Colocar productos ancla en ubicaciones estratégicas")
-        print("   • Crear bundles con productos frecuentemente asociados")
-        print("   • Implementar descuentos en segunda compra")
-        print("   • Desarrollar campañas de productos complementarios")
-        
+        st.markdown("### 💡 Estrategias Recomendadas")
+        st.markdown("""
+        - Colocar productos ancla en ubicaciones estratégicas
+        - Crear bundles con productos frecuentemente asociados
+        - Implementar descuentos en segunda compra
+        - Desarrollar campañas de productos complementarios
+        """)
     def run_analysis(self):
         """Ejecuta el análisis completo de cesta de compra"""
         try:

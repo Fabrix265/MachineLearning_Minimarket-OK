@@ -388,8 +388,18 @@ class SalesPredictionStreamlit:
                 mejor_mes = ventas_mensuales.loc[ventas_mensuales["PrecioTotal"].idxmax()]
                 peor_mes = ventas_mensuales.loc[ventas_mensuales["PrecioTotal"].idxmin()]
                 
-                st.markdown(f"**Mejor mes:** {mejor_mes['Mes']:02d}/{mejor_mes['Año']} - S/ {mejor_mes['PrecioTotal']:,.2f}")
-                st.markdown(f"**Peor mes:** {peor_mes['Mes']:02d}/{peor_mes['Año']} - S/ {peor_mes['PrecioTotal']:,.2f}")
+                # Convertir a entero antes de aplicar :02d
+                mejor_mes_num = int(mejor_mes['Mes'])
+                mejor_anio = int(mejor_mes['Año'])
+                mejor_total = mejor_mes['PrecioTotal']
+
+                peor_mes_num = int(peor_mes['Mes'])
+                peor_anio = int(peor_mes['Año'])
+                peor_total = peor_mes['PrecioTotal']
+
+                st.markdown(f"**Mejor mes:** {mejor_mes_num:02d}/{mejor_anio} - S/ {mejor_total:,.2f}")
+                st.markdown(f"**Peor mes:** {peor_mes_num:02d}/{peor_anio} - S/ {peor_total:,.2f}")
+
             
             with col2:
                 # Estacionalidad

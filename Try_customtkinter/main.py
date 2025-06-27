@@ -267,7 +267,27 @@ class MinimarketStreamlitApp:
             st.error("❌ Primero debe cargar los datos desde la página de inicio.")
             return
         try:
-            BasketAnalysisStreamlit(st.session_state.df).show_interface()
+            basket = BasketAnalysisStreamlit(st.session_state.df)
+            basket.prepare_data()
+            meses_disponibles = basket.show_available_months()
+
+            if not meses_disponibles:
+                st.warning("⚠️ No hay meses disponibles para analizar.")
+                return
+
+            # Diccionario: {mes_num: "Mes Nombre"}
+            opciones = {num: basket.meses_nombres[num].capitalize() for num in meses_disponibles}
+
+            # Selectbox para elegir el mes
+            mes_nombre_seleccionado = st.selectbox("Seleccione el mes a analizar:", list(opciones.values()))
+            mes_numero = [k for k, v in opciones.items() if v == mes_nombre_seleccionado][0]
+
+            # Ejecutar el análisis
+            analisis_exitoso = basket.analyze_month(mes_numero)
+
+            if analisis_exitoso:
+                basket.generate_marketing_insights(mes_numero)
+
         except Exception as e:
             st.error(f"Error en módulo de análisis de cesta: {e}")
             st.exception(e)
