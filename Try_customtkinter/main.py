@@ -44,7 +44,7 @@ class MinimarketStreamlitApp:
         st.markdown("""
         <style>
         .main-header {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%);
             padding: 1rem;
             border-radius: 10px;
             margin-bottom: 2rem;
@@ -56,7 +56,7 @@ class MinimarketStreamlitApp:
             font-size: 2.5rem;
         }
         .sidebar-header {
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(180deg, #c0392b 0%, #e74c3c 100%);
             padding: 1rem;
             border-radius: 10px;
             margin-bottom: 1rem;
