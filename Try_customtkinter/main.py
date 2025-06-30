@@ -131,7 +131,7 @@ class MinimarketStreamlitApp:
         with st.sidebar:
             st.markdown("""
             <div class="sidebar-header">
-                <h2>💼 MENÚ PRINCIPAL</h2>
+                <h2>MENÚ PRINCIPAL</h2>
             </div>
             """, unsafe_allow_html=True)
 
@@ -162,7 +162,7 @@ class MinimarketStreamlitApp:
     def show_header(self):
         st.markdown("""
         <div class="main-header">
-            <h1>💼 Sistema de Gestión Minimarket ML</h1>
+            <h1>Sistema de Gestión Minimarket ML</h1>
         </div>
         """, unsafe_allow_html=True)
 
